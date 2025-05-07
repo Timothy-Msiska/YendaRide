@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uber/views/name_registration.dart';
 
 class PhoneLoginPage extends StatefulWidget {
   @override
@@ -105,10 +106,14 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
               SizedBox(height: 10),
               ElevatedButton(
-                onPressed: isAgreed
-                    ? () {
-                  // Handle login logic
-                }
+                  onPressed: isAgreed
+                      ? () {
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EnterNamePage()),
+                    );
+                  }
                     : null, // Disabled when not agreed
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.yellow,

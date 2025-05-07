@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uber/views/home.dart';
 
 class EnterNamePage extends StatelessWidget {
   final TextEditingController firstNameController = TextEditingController();
@@ -48,8 +49,13 @@ class EnterNamePage extends StatelessWidget {
             _buildInputField(lastNameController, 'Last Name'),
             Spacer(),
             ElevatedButton(
-              onPressed: () {
-                // Handle Next logic here
+              onPressed:
+                   () {
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>Home()),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow,
