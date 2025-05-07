@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uber/views/enter_location.dart';
 
 class Home extends StatelessWidget {
   @override
@@ -22,7 +23,10 @@ class Home extends StatelessWidget {
             SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
-                // Navigate to location change page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => EnterLocationPage()),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow,

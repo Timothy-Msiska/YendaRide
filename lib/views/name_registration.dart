@@ -15,7 +15,7 @@ class EnterNamePage extends StatelessWidget {
         leading: BackButton(color: Colors.yellow),
         centerTitle: true,
         title: Text(
-          'YANGA',
+          'YENDA RIDE',
           style: TextStyle(
             color: Colors.yellow,
             fontWeight: FontWeight.bold,
@@ -49,14 +49,37 @@ class EnterNamePage extends StatelessWidget {
             _buildInputField(lastNameController, 'Last Name'),
             Spacer(),
             ElevatedButton(
-              onPressed:
-                   () {
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) =>Home()),
-                );
+              onPressed: () {
+                if (firstNameController.text.trim().isEmpty || lastNameController.text.trim().isEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: Text(
+                        'Incomplete Information',
+                        style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold),
+                      ),
+                      content: Text(
+                        'Please fill all blank spaces.',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('OK', style: TextStyle(color: Colors.yellow)),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => Home()),
+                  );
+                }
               },
+
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow,
                 minimumSize: Size(double.infinity, 50),

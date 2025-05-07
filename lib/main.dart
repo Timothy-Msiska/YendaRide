@@ -7,7 +7,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Yanga Login',
+      title: 'YENDA RIDE Login',
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
       home: PhoneLoginPage(),

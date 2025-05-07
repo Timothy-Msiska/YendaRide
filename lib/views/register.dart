@@ -24,7 +24,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
               Align(
                 alignment: Alignment.center,
                 child: Text(
-                  'YANGA',
+                  'YENDA RIDE',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -108,7 +108,6 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
               ElevatedButton(
                   onPressed: isAgreed
                       ? () {
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => EnterNamePage()),
