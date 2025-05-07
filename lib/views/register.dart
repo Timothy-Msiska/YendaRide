@@ -128,7 +128,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
               SizedBox(height: 20),
               Text(
-                'By continuing, I accept the terms of the User Agreement\nand Yanga License Agreement and consent to the\nprocessing of my personal information in accordance\nwith the Privacy Policy.',
+                'By ticking, I accept the terms of the User Agreement\nand Yanga License Agreement and consent to the\nprocessing of my personal information in accordance\nwith the Privacy Policy.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white54, fontSize: 12),
               ),
