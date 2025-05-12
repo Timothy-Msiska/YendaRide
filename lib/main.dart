@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uber/views/register.dart';
+import 'package:uber/views/ride_summary.dart';
 
 void main() => runApp(MyApp());
 
