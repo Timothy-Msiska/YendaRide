@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_place/google_place.dart';
 import 'package:uber/views/ride_summary.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart'; // Add this package for geocoding
 
 class EnterLocationPage extends StatefulWidget {
+  const EnterLocationPage({super.key});
+
   @override
   _EnterLocationPageState createState() => _EnterLocationPageState();
 }
@@ -12,15 +16,29 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
   List<AutocompletePrediction> predictions = [];
   TextEditingController searchController = TextEditingController();
 
+  LatLng? currentPosition;
+  LatLng? selectedLocation; // Track the selected location
+  GoogleMapController? mapController;
+
   @override
   void initState() {
     super.initState();
     _initGooglePlace();
+    _getCurrentLocation(); // Try to get current location on init
   }
 
   void _initGooglePlace() {
     const String apiKey = "AIzaSyCxaal1vxz1BN_psuhoBBMfZ-oxhh5ClCo";
     googlePlace = GooglePlace(apiKey);
+  }
+
+  // Method to get current location (you'll need to implement this properly)
+  void _getCurrentLocation() async {
+    // This is a placeholder - in a real app, you'd use the location plugin
+    // For now, we'll just set a default position
+    setState(() {
+      currentPosition = LatLng(-13.9626, 33.7741); // Default to Malawi
+    });
   }
 
   void autoCompleteSearch(String value) async {
@@ -38,11 +56,29 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
     }
   }
 
-  void selectPrediction(AutocompletePrediction prediction) {
-    setState(() {
-      predictions = [];
-      searchController.text = prediction.description ?? "";
-    });
+  void selectPrediction(AutocompletePrediction prediction) async {
+    try {
+      // Convert the prediction to coordinates
+      List<Location> locations = await locationFromAddress(
+        prediction.description ?? "",
+      );
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        setState(() {
+          predictions = [];
+          searchController.text = prediction.description ?? "";
+          selectedLocation = LatLng(location.latitude, location.longitude);
+        });
+
+        // Move the camera to the selected location
+        mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(selectedLocation!, 15),
+        );
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+      // Handle error (maybe show a snackbar)
+    }
   }
 
   @override
@@ -52,11 +88,19 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Container(
-              color: Colors.grey[900],
-              child: Center(
-                child: Icon(Icons.map, size: 120, color: Colors.yellow[700]),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target:
+                    selectedLocation ??
+                    currentPosition ??
+                    LatLng(-13.9626, 33.7741),
+                zoom: 15,
               ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              onMapCreated: (controller) {
+                mapController = controller;
+              },
             ),
           ),
           SafeArea(
@@ -97,7 +141,10 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
                         itemCount: predictions.length,
                         itemBuilder: (context, index) {
                           return ListTile(
-                            leading: Icon(Icons.location_on, color: Colors.yellow),
+                            leading: Icon(
+                              Icons.location_on,
+                              color: Colors.yellow,
+                            ),
                             title: Text(
                               predictions[index].description ?? "",
                               style: TextStyle(color: Colors.white),
@@ -117,18 +164,38 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => RideSummaryPage()),
-            );
+            if (selectedLocation != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => RideSummaryPage(
+                        destinationName: searchController.text,
+                        location: selectedLocation!,
+                      ),
+                ),
+              );
+            } else {
+              // Show error if no location selected
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please select a destination'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.yellow[700],
             minimumSize: Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          child: Text('Continue',
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Continue',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
