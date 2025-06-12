@@ -1,6 +1,203 @@
 import 'package:flutter/material.dart';
+import 'package:google_place/google_place.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart' as geoCoding;
+
+class EnterLocationPage extends StatefulWidget {
+  const EnterLocationPage({super.key});
+
+  @override
+  _EnterLocationPageState createState() => _EnterLocationPageState();
+}
+
+class _EnterLocationPageState extends State<EnterLocationPage> {
+  late GooglePlace googlePlace;
+  List<AutocompletePrediction> predictions = [];
+  TextEditingController searchController = TextEditingController();
+
+  LatLng? currentPosition;
+  LatLng? selectedLocation;
+  GoogleMapController? mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGooglePlace();
+    _getCurrentLocation();
+  }
+
+  void _initGooglePlace() {
+    const String apiKey = "AIzaSyCxaal1vxz1BN_psuhoBBMfZ-oxhh5ClCo";
+    googlePlace = GooglePlace(apiKey);
+  }
+
+  void _getCurrentLocation() async {
+    setState(() {
+      currentPosition = LatLng(-13.9626, 33.7741);
+    });
+  }
+
+  void autoCompleteSearch(String value) async {
+    if (value.isNotEmpty) {
+      var result = await googlePlace.autocomplete.get(value);
+      if (result != null && result.predictions != null && mounted) {
+        setState(() {
+          predictions = result.predictions!;
+        });
+      }
+    } else {
+      setState(() {
+        predictions = [];
+      });
+    }
+  }
+
+  void selectPrediction(AutocompletePrediction prediction) async {
+    try {
+      List<geoCoding.Location> locations = await geoCoding.locationFromAddress(
+        prediction.description ?? "",
+      );
+
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        setState(() {
+          predictions = [];
+          searchController.text = prediction.description ?? "";
+          selectedLocation = LatLng(location.latitude, location.longitude);
+        });
+
+        mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(selectedLocation!, 15),
+        );
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: selectedLocation ?? currentPosition ?? LatLng(-13.9626, 33.7741),
+                zoom: 15,
+              ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              onMapCreated: (controller) {
+                mapController = controller;
+              },
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Material(
+                    elevation: 6,
+                    borderRadius: BorderRadius.circular(16),
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: autoCompleteSearch,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Enter destination',
+                        hintStyle: TextStyle(color: Colors.grey),
+                        prefixIcon: Icon(Icons.search, color: Colors.yellow),
+                        filled: true,
+                        fillColor: Colors.grey[850],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 18),
+                      ),
+                    ),
+                  ),
+                  if (predictions.isNotEmpty)
+                    Container(
+                      margin: EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[850],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: predictions.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            leading: Icon(Icons.location_on, color: Colors.yellow),
+                            title: Text(
+                              predictions[index].description ?? "",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () => selectPrediction(predictions[index]),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: () {
+            if (selectedLocation != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RideSummaryPage(
+                    destinationName: searchController.text,
+                    destinationLocation: selectedLocation!,
+                  ),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please select a destination'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.yellow[700],
+            minimumSize: Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            'Continue',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class RideSummaryPage extends StatelessWidget {
+  final String destinationName;
+  final LatLng destinationLocation;
+
+  const RideSummaryPage({
+    Key? key,
+    required this.destinationName,
+    required this.destinationLocation,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -14,25 +211,30 @@ class RideSummaryPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'Drivers are 5 min away',
                     style: TextStyle(color: Colors.yellow, fontSize: 16),
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'The driver will pick\nyou up where you are',
-                    style: TextStyle(
+                    'The driver will pick\nyou up at:',
+                    style: const TextStyle(
                       color: Colors.yellow,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  SizedBox(height: 10),
+                  Text(
+                    destinationName,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                  ),
                 ],
               ),
             ),
 
-            // Show map button
+            // Rest of your UI remains the same:
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Row(
@@ -58,7 +260,6 @@ class RideSummaryPage extends StatelessWidget {
 
             SizedBox(height: 20),
 
-            // Location Section
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
@@ -69,13 +270,13 @@ class RideSummaryPage extends StatelessWidget {
                 children: [
                   SizedBox(height: 16),
                   Row(
-                    children: const [
-                      Icon(Icons.radio_button_checked, color: Colors.yellow),
+                    children: [
+                      const Icon(Icons.radio_button_checked, color: Colors.yellow),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Area 46, Njewa',
-                          style: TextStyle(color: Colors.yellow, fontSize: 16),
+                          destinationName,
+                          style: const TextStyle(color: Colors.yellow, fontSize: 16),
                         ),
                       ),
                     ],
@@ -87,7 +288,7 @@ class RideSummaryPage extends StatelessWidget {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'EcoBank, Aera 14 • 8min & 4kms',
+                          'EcoBank, Area 14 • 8min & 4kms',
                           style: TextStyle(color: Colors.yellow, fontSize: 16),
                         ),
                       ),
@@ -96,7 +297,6 @@ class RideSummaryPage extends StatelessWidget {
                   ),
                   SizedBox(height: 20),
 
-                  // Ride Options
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
@@ -105,10 +305,8 @@ class RideSummaryPage extends StatelessWidget {
                       RideOption(title: 'Premium', price: 'MwK 9000 /kms'),
                     ],
                   ),
-
                   SizedBox(height: 20),
 
-                  // Price & Adjuster
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                     decoration: BoxDecoration(
@@ -145,10 +343,8 @@ class RideSummaryPage extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 20),
 
-                  // Find Driver Button
                   ElevatedButton.icon(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
@@ -172,7 +368,7 @@ class RideSummaryPage extends StatelessWidget {
                   SizedBox(height: 16),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),

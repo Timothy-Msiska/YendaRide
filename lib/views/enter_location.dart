@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_place/google_place.dart';
 import 'package:uber/views/ride_summary.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart'; // Add this package for geocoding
+import 'package:geocoding/geocoding.dart' as geoCoding;
 
 class EnterLocationPage extends StatefulWidget {
   const EnterLocationPage({super.key});
@@ -17,14 +17,14 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
   TextEditingController searchController = TextEditingController();
 
   LatLng? currentPosition;
-  LatLng? selectedLocation; // Track the selected location
+  LatLng? selectedLocation;
   GoogleMapController? mapController;
 
   @override
   void initState() {
     super.initState();
     _initGooglePlace();
-    _getCurrentLocation(); // Try to get current location on init
+    _getCurrentLocation();
   }
 
   void _initGooglePlace() {
@@ -32,12 +32,9 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
     googlePlace = GooglePlace(apiKey);
   }
 
-  // Method to get current location (you'll need to implement this properly)
   void _getCurrentLocation() async {
-    // This is a placeholder - in a real app, you'd use the location plugin
-    // For now, we'll just set a default position
     setState(() {
-      currentPosition = LatLng(-13.9626, 33.7741); // Default to Malawi
+      currentPosition = LatLng(-13.9626, 33.7741); // Malawi
     });
   }
 
@@ -58,10 +55,10 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
 
   void selectPrediction(AutocompletePrediction prediction) async {
     try {
-      // Convert the prediction to coordinates
-      List<Location> locations = await locationFromAddress(
+      List<geoCoding.Location> locations = await geoCoding.locationFromAddress(
         prediction.description ?? "",
       );
+
       if (locations.isNotEmpty) {
         final location = locations.first;
         setState(() {
@@ -70,14 +67,37 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
           selectedLocation = LatLng(location.latitude, location.longitude);
         });
 
-        // Move the camera to the selected location
         mapController?.animateCamera(
           CameraUpdate.newLatLngZoom(selectedLocation!, 15),
         );
       }
     } catch (e) {
       print("Error getting location: $e");
-      // Handle error (maybe show a snackbar)
+    }
+  }
+
+  void _onMapTapped(LatLng latLng) async {
+    setState(() {
+      selectedLocation = latLng;
+    });
+
+    try {
+      List<geoCoding.Placemark> placemarks = await geoCoding.placemarkFromCoordinates(
+        latLng.latitude,
+        latLng.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        String address =
+            "${placemark.name}, ${placemark.locality}, ${placemark.country}";
+
+        setState(() {
+          searchController.text = address;
+        });
+      }
+    } catch (e) {
+      print("Reverse geocoding failed: $e");
     }
   }
 
@@ -90,10 +110,7 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
           Positioned.fill(
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
-                target:
-                    selectedLocation ??
-                    currentPosition ??
-                    LatLng(-13.9626, 33.7741),
+                target: selectedLocation ?? currentPosition ?? LatLng(-13.9626, 33.7741),
                 zoom: 15,
               ),
               myLocationEnabled: true,
@@ -101,6 +118,15 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
               onMapCreated: (controller) {
                 mapController = controller;
               },
+              onTap: _onMapTapped,
+              markers: selectedLocation != null
+                  ? {
+                Marker(
+                  markerId: MarkerId("selected"),
+                  position: selectedLocation!,
+                ),
+              }
+                  : {},
             ),
           ),
           SafeArea(
@@ -141,10 +167,7 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
                         itemCount: predictions.length,
                         itemBuilder: (context, index) {
                           return ListTile(
-                            leading: Icon(
-                              Icons.location_on,
-                              color: Colors.yellow,
-                            ),
+                            leading: Icon(Icons.location_on, color: Colors.yellow),
                             title: Text(
                               predictions[index].description ?? "",
                               style: TextStyle(color: Colors.white),
@@ -168,15 +191,13 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) => RideSummaryPage(
-                        destinationName: searchController.text,
-                        location: selectedLocation!,
-                      ),
+                  builder: (context) => RideSummaryPage(
+                    destinationName: searchController.text,
+                    destinationLocation: selectedLocation!,
+                  ),
                 ),
               );
             } else {
-              // Show error if no location selected
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Please select a destination'),
