@@ -19,7 +19,7 @@ class _EnterLocationPageState extends State<EnterLocationPage> {
   }
 
   void _initGooglePlace() {
-    const String apiKey = "YOUR_API_KEY_HERE";
+    const String apiKey = "AIzaSyCxaal1vxz1BN_psuhoBBMfZ-oxhh5ClCo";
     googlePlace = GooglePlace(apiKey);
   }
 
